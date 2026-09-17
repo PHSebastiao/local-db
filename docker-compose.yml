@@ -1,0 +1,129 @@
+services:
+  mongo:
+    profiles: [mongo]
+    image: mongo:8.0
+    container_name: db-mongo
+    restart: always
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: root
+    volumes:
+      - mongo-data:/data/db
+
+  mysql:
+    profiles: [mysql]
+    image: mysql:8-oracle
+    container_name: db-mysql
+    restart: always
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+    volumes:
+      - mysql-data:/var/lib/mysql
+
+  postgres:
+    profiles: [postgres]
+    image: postgres:16
+    container_name: db-postgres
+    restart: always
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: root
+      POSTGRES_PASSWORD: root
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+
+  redis:
+    profiles: [redis]
+    image: redis:8-alpine
+    container_name: db-redis
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+
+  mariadb:
+    profiles: [mariadb]
+    image: mariadb:11
+    container_name: db-mariadb
+    restart: always
+    ports:
+      - "3307:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+    volumes:
+      - mariadb-data:/var/lib/mysql
+
+  elasticsearch:
+    profiles: [elasticsearch]
+    image: elasticsearch:8.19.21
+    container_name: db-elasticsearch
+    restart: always
+    ports:
+      - "9200:9200"
+    environment:
+      discovery.type: single-node
+      xpack.security.enabled: "false"
+      xpack.security.http.ssl.enabled: "false"
+      ES_JAVA_OPTS: "-Xms512m -Xmx512m"
+    volumes:
+      - elasticsearch-data:/usr/share/elasticsearch/data
+
+  versitygw:
+    profiles: [versitygw]
+    image: versity/versitygw:v1.8.0
+    container_name: db-versitygw
+    restart: always
+    ports:
+      - "7070:7070" # S3 API
+      - "7071:7071" # Web UI
+    # The posix backend refuses to start unless its root and the IAM/versioning
+    # directories already exist, so create them before handing off to the entrypoint.
+    entrypoint:
+      [
+        "/bin/sh",
+        "-c",
+        "mkdir -p /data/s3 /data/versioning /data/iam && exec /usr/local/bin/docker-entrypoint.sh",
+      ]
+    environment:
+      ROOT_ACCESS_KEY: root
+      ROOT_SECRET_KEY: root
+      VGW_PORT: ":7070"
+      VGW_WEBUI_PORT: ":7071"
+      VGW_CORS_ALLOW_ORIGIN: "*"
+      VGW_BACKEND: posix
+      VGW_BACKEND_ARGS: /data/s3
+      VGW_IAM_DIR: /data/iam
+      VGW_VERSIONING_DIR: /data/versioning
+    volumes:
+      - versitygw-data:/data
+
+  clickhouse:
+    profiles: [clickhouse]
+    image: clickhouse/clickhouse-server:26.8-alpine
+    container_name: db-clickhouse
+    restart: always
+    ports:
+      - "8123:8123"
+      - "9005:9000"
+    # Without a user/password the image disables network access for "default".
+    environment:
+      CLICKHOUSE_USER: default
+      CLICKHOUSE_PASSWORD: root
+    volumes:
+      - clickhouse-data:/var/lib/clickhouse
+
+volumes:
+  mongo-data:
+  mysql-data:
+  postgres-data:
+  redis-data:
+  mariadb-data:
+  elasticsearch-data:
+  versitygw-data:
+  clickhouse-data:
